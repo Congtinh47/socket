@@ -19,6 +19,12 @@ app.get("/", (req, res) => {
 
 io.on("connection", (socket) => {
 	console.log("a user connected");
+	socket.on("datatest", ({ test, orderId }) => {
+		socket.emit("afterCheck", {
+			message: "thanh toan thanh cong",
+			orderId: orderId,
+		});
+	});
 });
 const PORT = process.env.PORT || 4000;
 httpServer.listen(PORT, () => {
