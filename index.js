@@ -19,6 +19,63 @@ app.get("/", (req, res) => {
 
 let orderData = [];
 let adminSocketId = "";
+function statusPaidForClient(orderSocketId) {
+	if (orderSocketId) {
+		console.log(1);
+		io
+			.to(orderSocketId.socketId)
+			.emit("apply approved", { message: "your order is approved" });
+		io
+			.to(adminSocketId)
+			.emit("comfirm success", { message: "your comfirm is success" });
+	} else {
+		io
+			.to(adminSocketId)
+			.emit("comfirm fail", { message: "your comfirm is fail" });
+	}
+}
+function statusShippingForClient(orderSocketId) {
+	if (orderSocketId) {
+		io
+			.to(orderSocketId.socketId)
+			.emit("order shipping", { message: "your order is shipping" });
+		io.to(adminSocketId).emit("order shipping success", {
+			message: "your action shipping is success",
+		});
+	} else {
+		io
+			.to(adminSocketId)
+			.emit("order shipping fail", { message: "your action shipping is fail" });
+	}
+}
+function statusDeliveredForClient(orderSocketId) {
+	if (orderSocketId) {
+		io
+			.to(orderSocketId.socketId)
+			.emit("order delivered", { message: "your order is delivered" });
+		io.to(adminSocketId).emit("order delivered success", {
+			message: "your action delivered is success",
+		});
+	} else {
+		io
+			.to(adminSocketId)
+			.emit("order delivered fail", { message: "your action delivered is fail" });
+	}
+}
+function statusCompletedForClient(orderSocketId) {
+	if (orderSocketId) {
+		io
+			.to(orderSocketId.socketId)
+			.emit("order completed", { message: "your order is completed" });
+		io.to(adminSocketId).emit("order completed success", {
+			message: "your action completed is success",
+		});
+	} else {
+		io
+			.to(adminSocketId)
+			.emit("order completed fail", { message: "your action completed is fail" });
+	}
+}
 io.on("connection", (socket) => {
 	//customer
 
@@ -56,17 +113,19 @@ io.on("connection", (socket) => {
 		adminSocketId = socket.id;
 		let orderSocketId = orderData.find((order) => order.orderId === orderId);
 		console.log("comfirm order:", orderId);
-		if (orderSocketId) {
-			io
-				.to(orderSocketId.socketId)
-				.emit("apply approved", { message: "your order is approved" });
-			io
-				.to(adminSocketId)
-				.emit("comfirm success", { message: "your comfirm is success" });
-		} else {
-			io
-				.to(adminSocketId)
-				.emit("comfirm fail", { message: "your comfirm is fail" });
+		switch (statusOrder) {
+			case "paid":
+				statusPaidForClient(orderSocketId);
+				break;
+			case "shipping":
+				statusShippingForClient(orderSocketId);
+				break;
+			case "delivered":
+				statusDeliveredForClient(orderSocketId);
+				break;
+			case "completed":
+				statusCompletedForClient(orderSocketId);
+				break;
 		}
 	});
 	socket.on("reject order", ({ statusOrder, orderId }) => {
@@ -83,70 +142,6 @@ io.on("connection", (socket) => {
 			io
 				.to(adminSocketId)
 				.emit("rejecte fail", { message: "your reject is fail" });
-		}
-	});
-	socket.on("order paid", ({ statusOrder, orderId }) => {
-		adminSocketId = socket.id;
-		let orderSocketId = orderData.find((order) => order.orderId === orderId);
-		if (orderSocketId) {
-			io
-				.to(orderSocketId.socketId)
-				.emit("order paid", { message: "your order is paid" });
-			io
-				.to(adminSocketId)
-				.emit("order paid success", { message: "your action paid is success" });
-		} else {
-			io
-				.to(adminSocketId)
-				.emit("order paid fail", { message: "your action paid is fail" });
-		}
-	});
-	socket.on("order shipping", ({ statusOrder, orderId }) => {
-		adminSocketId = socket.id;
-		let orderSocketId = orderData.find((order) => order.orderId === orderId);
-		if (orderSocketId) {
-			io
-				.to(orderSocketId.socketId)
-				.emit("order shipping", { message: "your order is shipping" });
-			io.to(adminSocketId).emit("order shipping success", {
-				message: "your action shipping is success",
-			});
-		} else {
-			io
-				.to(adminSocketId)
-				.emit("order shipping fail", { message: "your action shipping is fail" });
-		}
-	});
-	socket.on("order delivered", ({ statusOrder, orderId }) => {
-		adminSocketId = socket.id;
-		let orderSocketId = orderData.find((order) => order.orderId === orderId);
-		if (orderSocketId) {
-			io
-				.to(orderSocketId.socketId)
-				.emit("order delivered", { message: "your order is delivered" });
-			io.to(adminSocketId).emit("order delivered success", {
-				message: "your action delivered is success",
-			});
-		} else {
-			io
-				.to(adminSocketId)
-				.emit("order delivered fail", { message: "your action delivered is fail" });
-		}
-	});
-	socket.on("order completed", ({ statusOrder, orderId }) => {
-		adminSocketId = socket.id;
-		let orderSocketId = orderData.find((order) => order.orderId === orderId);
-		if (orderSocketId) {
-			io
-				.to(orderSocketId.socketId)
-				.emit("order completed", { message: "your order is completed" });
-			io.to(adminSocketId).emit("order completed success", {
-				message: "your action completed is success",
-			});
-		} else {
-			io
-				.to(adminSocketId)
-				.emit("order completed fail", { message: "your action completed is fail" });
 		}
 	});
 });
