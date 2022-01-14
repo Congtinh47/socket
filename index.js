@@ -5,7 +5,8 @@ const http = require("http");
 const { Server } = require("socket.io");
 const httpServer = createServer(app);
 
-const corsOrigin = process.env.BASE_CORSORIGIN || "http://localhost:3000";
+// const corsOrigin = process.env.BASE_CORSORIGIN || "http://localhost:3000";
+const corsOrigin = "*";
 const io = new Server(httpServer, {
 	cors: {
 		origin: corsOrigin,
