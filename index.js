@@ -7,6 +7,8 @@ const httpServer = createServer(app);
 
 // const corsOrigin = process.env.BASE_CORSORIGIN || "http://localhost:3000";
 const corsOrigin = "*";
+let orderData = [];
+let adminSocketId = "";
 const io = new Server(httpServer, {
 	cors: {
 		origin: corsOrigin,
@@ -18,8 +20,15 @@ app.get("/", (req, res) => {
 	res.json({ message: "Ok" });
 });
 
-let orderData = [];
-let adminSocketId = "";
+app.get("/checkout-fail", (req, res) => {
+	// res.sendFile(__dirname + "/index.html");
+	console.log(res);
+	io
+		.to(adminSocketId)
+		.emit("checkout fail", { message: "your comfirm is fail" });
+	res.json({ message: "fail" });
+});
+
 function statusPaidForClient(orderSocketId) {
 	if (orderSocketId) {
 		console.log(1);
@@ -85,21 +94,22 @@ io.on("connection", (socket) => {
 		orderData = orderData.filter((order) => order.socketId !== socket.id);
 	});
 
-	socket.on("checkout", ({ message, orderId }) => {
-		console.log(message, orderId);
+	socket.on("checkout", ({ message, order }) => {
 		if (orderData.length === 0) {
-			orderData.push({ orderId: orderId, socketId: socket.id });
+			orderData.push({ orderId: order._id, socketId: socket.id });
 		} else {
-			const findOrder = orderData.find((order) => order.orderId === orderId);
+			const findOrder = orderData.find(
+				(orderSame) => orderSame.orderId === order._id
+			);
 			// console.log(findOrder);
 			if (findOrder) {
-				console.log("sameOrderId");
+				console.log("sameOrder");
 			} else {
-				orderData.push({ orderId: orderId, socketId: socket.id });
+				orderData.push({ order: order._id, socketId: socket.id });
 			}
 		}
 		if (adminSocketId) {
-			io.to(adminSocketId).emit("new order", { message: "you have a new order" });
+			io.to(adminSocketId).emit("new order", { order: order });
 		}
 		console.log(orderData);
 	});
