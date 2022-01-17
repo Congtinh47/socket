@@ -7,7 +7,13 @@ const httpServer = createServer(app);
 
 // const corsOrigin = process.env.BASE_CORSORIGIN || "http://localhost:3000";
 const corsOrigin = "*";
-let orderData = [];
+let orderData = [
+	{
+		orderId: "61e4b856f26605cc9983b7f8",
+		socketId: "VyHnrvCn7UwsaZXbAAAB",
+		orderIdMoMo: "MOMOMOTD202112271642379350320",
+	},
+];
 let adminSocketId = "";
 const io = new Server(httpServer, {
 	cors: {
@@ -22,7 +28,7 @@ app.get("/", (req, res) => {
 
 app.get("/checkout-fail", (req, res) => {
 	// res.sendFile(__dirname + "/index.html");
-	console.log(res);
+	// console.log(res);
 	io
 		.to(adminSocketId)
 		.emit("checkout fail", { message: "your comfirm is fail" });
@@ -30,15 +36,17 @@ app.get("/checkout-fail", (req, res) => {
 });
 
 function statusPaidForClient(orderSocketId) {
+	console.log(orderSocketId);
 	if (orderSocketId) {
 		console.log(1);
 		io
 			.to(orderSocketId.socketId)
-			.emit("apply approved", { message: "your order is approved" });
+			.emit("order paid", { message: "your order is approved" });
 		io
 			.to(adminSocketId)
-			.emit("comfirm success", { message: "your comfirm is success" });
+			.emit("paid success", { message: "your comfirm is success" });
 	} else {
+		console.log("fail");
 		io
 			.to(adminSocketId)
 			.emit("comfirm fail", { message: "your comfirm is fail" });
@@ -48,7 +56,7 @@ function statusShippingForClient(orderSocketId) {
 	if (orderSocketId) {
 		io
 			.to(orderSocketId.socketId)
-			.emit("order shipping", { message: "your order is shipping" });
+			.emit("order packed", { message: "your order is shipping" });
 		io.to(adminSocketId).emit("order shipping success", {
 			message: "your action shipping is success",
 		});
@@ -62,7 +70,7 @@ function statusDeliveredForClient(orderSocketId) {
 	if (orderSocketId) {
 		io
 			.to(orderSocketId.socketId)
-			.emit("order delivered", { message: "your order is delivered" });
+			.emit("order posted", { message: "your order is delivered" });
 		io.to(adminSocketId).emit("order delivered success", {
 			message: "your action delivered is success",
 		});
@@ -86,6 +94,7 @@ function statusCompletedForClient(orderSocketId) {
 			.emit("order completed fail", { message: "your action completed is fail" });
 	}
 }
+
 io.on("connection", (socket) => {
 	//customer
 
@@ -94,9 +103,14 @@ io.on("connection", (socket) => {
 		orderData = orderData.filter((order) => order.socketId !== socket.id);
 	});
 
-	socket.on("checkout", ({ message, order }) => {
+	socket.on("checkout", ({ message, order, orderId }) => {
+		// console.log(order);
 		if (orderData.length === 0) {
-			orderData.push({ orderId: order._id, socketId: socket.id });
+			orderData.push({
+				orderId: order._id,
+				socketId: socket.id,
+				orderIdMoMo: orderId,
+			});
 		} else {
 			const findOrder = orderData.find(
 				(orderSame) => orderSame.orderId === order._id
@@ -105,7 +119,11 @@ io.on("connection", (socket) => {
 			if (findOrder) {
 				console.log("sameOrder");
 			} else {
-				orderData.push({ order: order._id, socketId: socket.id });
+				orderData.push({
+					orderId: order._id,
+					socketId: socket.id,
+					orderIdMoMo: orderId,
+				});
 			}
 		}
 		if (adminSocketId) {
@@ -120,10 +138,10 @@ io.on("connection", (socket) => {
 		adminSocketId = socket.id;
 	});
 
+	adminSocketId = socket.id;
 	socket.on("apply order", ({ statusOrder, orderId }) => {
-		adminSocketId = socket.id;
-		let orderSocketId = orderData.find((order) => order.orderId === orderId);
-		console.log("comfirm order:", orderId);
+		const orderSocketId = orderData.find((order) => order.orderId === orderId);
+		console.log("comfirm order:", orderId, statusOrder);
 		switch (statusOrder) {
 			case "paid":
 				statusPaidForClient(orderSocketId);
@@ -139,6 +157,7 @@ io.on("connection", (socket) => {
 				break;
 		}
 	});
+
 	socket.on("reject order", ({ statusOrder, orderId }) => {
 		adminSocketId = socket.id;
 		let orderSocketId = orderData.find((order) => order.orderId === orderId);
@@ -155,6 +174,23 @@ io.on("connection", (socket) => {
 				.emit("rejecte fail", { message: "your reject is fail" });
 		}
 	});
+
+	socket.on(
+		"serverApi send data",
+		({ partnerCode, orderId, amount, orderInfo, message }) => {
+			const theSameOrder = orderData.find((data) => orderId === data.orderIdMoMo);
+			if (theSameOrder) {
+				io.to(adminSocketId).emit("user paied", { orderId: theSameOrder.orderId });
+				io.to(theSameOrder.socketId).emit("checkout Information", {
+					partnerCode,
+					orderId,
+					amount,
+					orderInfo,
+					message,
+				});
+			}
+		}
+	);
 });
 
 const PORT = process.env.PORT || 4000;
