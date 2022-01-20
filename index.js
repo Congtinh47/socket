@@ -195,5 +195,5 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 4000;
 httpServer.listen(PORT, () => {
-	console.log(`listening on *:${PORT}`);
+	// console.log(`listening on *:${PORT}`);
 });
